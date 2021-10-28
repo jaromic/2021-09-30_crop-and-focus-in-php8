@@ -7,8 +7,6 @@
  *
  */
 var InputfieldSubmitDropdown = {
-	
-	itemClicked: false, 
 
 	/**
 	 * Click event for dropdown item
@@ -27,8 +25,6 @@ var InputfieldSubmitDropdown = {
 		if(!$dropdown.length) return true;
 		
 		$button = $dropdown.data('pw-button');
-		
-		InputfieldSubmitDropdown.itemClicked = true;
 		
 		if($a.hasClass('pw-button-dropdown-default')) {
 			
@@ -71,8 +67,6 @@ var InputfieldSubmitDropdown = {
 	
 		// click the button
 		$button.click();
-		
-		InputfieldSubmitDropdown.itemClicked = false;
 
 		return false;	
 	},
@@ -88,10 +82,9 @@ var InputfieldSubmitDropdown = {
 	 * 
 	 * @param $dropdown An instance of ul.pw-button-dropdown
 	 * @param $mainButton An instance of button
-	 * @param bool required
 	 * 
 	 */
-	initDropdown: function($dropdown, $mainButton, required) {
+	initDropdown: function($dropdown, $mainButton) {
 		
 		var $toggleButton = $("<button type='button'><i class='fa fa-angle-down'></i></button>")
 			.attr('id', 'pw-dropdown-toggle-' + $mainButton.attr('id'));
@@ -162,19 +155,6 @@ var InputfieldSubmitDropdown = {
 			$(this).show();
 		});
 		
-		if(required) {
-			$mainButton.addClass('pw-button-dropdown-required');
-			// make a click on the main button open/close the dropdown
-			$mainButton.on('click', function() {
-				if(InputfieldSubmitDropdown.itemClicked) {
-					return true;
-				} else {
-					$toggleButton.mousedown();
-					return false;
-				}
-			});  
-		}
-		
 	},
 
 	/**
@@ -182,14 +162,10 @@ var InputfieldSubmitDropdown = {
 	 * 
 	 * @param buttonSelector String selector to find button(s) or jQuery object of button instances
 	 * @param $dropdownTemplate Optionally specify template to use (for cases where multiple buttons share same dropdown)
-	 * @param bool required Dropdown selection required? (i.e. clicking submit opens dropdown)
 	 * @returns {boolean} False if dropdowns not setup, true if they were
 	 * 
 	 */
-	init: function(buttonSelector, $dropdownTemplate, required) {
-		
-		if(typeof $dropdownTemplate === "undefined") $dropdownTemplate = null;
-		if(typeof required === "undefined") required = false;
+	init: function(buttonSelector, $dropdownTemplate) {
 	
 		// don't use dropdowns when in modal window
 		if($('body').hasClass('modal')) {
@@ -198,15 +174,15 @@ var InputfieldSubmitDropdown = {
 		}
 		
 		var $buttons = (typeof buttonSelector == "string") ? $(buttonSelector) : buttonSelector; 
-
+		
 		$buttons.each(function() {
 			var $button = $(this);
-			if($dropdownTemplate !== null) {
+			if(typeof $dropdownTemplate != "undefined") {
 				$dropdownTemplate.addClass('pw-button-dropdown-template');
-				InputfieldSubmitDropdown.initDropdown($dropdownTemplate, $button, required);
+				InputfieldSubmitDropdown.initDropdown($dropdownTemplate, $button);	
 			} else {
 				var $dropdown = $('#' + $(this).prop('id') + '_dropdown');
-				if($dropdown.length) InputfieldSubmitDropdown.initDropdown($dropdown, $button, required);
+				if($dropdown.length) InputfieldSubmitDropdown.initDropdown($dropdown, $button);
 			}
 		});
 		

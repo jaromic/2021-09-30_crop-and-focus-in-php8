@@ -882,8 +882,6 @@ function wireClassName($className, $withNamespace = false, $verbose = false) {
  * }
  * ~~~~~
  * 
- * #pw-group-class-helpers
- * 
  * @param string|object $className
  * @param bool $withClass Include class name in returned namespace? (default=false)
  * @param bool $strict Return array of namespaces if multiple match? (default=false)
@@ -1056,7 +1054,7 @@ function wireClassParents($className, $autoload = true) {
 				if($ns) $className = $ns . $_className;
 			}
 		}
-		$parents = @class_parents(ltrim($className, "\\"), $autoload);
+		$parents = class_parents(ltrim($className, "\\"), $autoload);
 	}
 	$a = array();
 	if(is_array($parents)) foreach($parents as $k => $v) {

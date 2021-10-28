@@ -4,13 +4,7 @@
  * AdminTheme Framework
  * 
  * The methods in this class may eventually be merged to AdminTheme.php, 
- * but are isolated to this class during development.
- * 
- * This file is licensed under the MIT license.
- * https://processwire.com/about/license/mit/
- * 
- * ProcessWire 3.x, Copyright 2021 by Ryan Cramer
- * https://processwire.com
+ * but are isolated to this class during development. 
  *
  * @property bool $isSuperuser
  * @property bool $isEditor
@@ -18,7 +12,6 @@
  * @property bool|string $isModal
  * @property bool|int $useAsLogin
  * @method array getUserNavArray()
- * @method array getPrimaryNavArray()
  *
  */
 abstract class AdminThemeFramework extends AdminTheme {
@@ -72,8 +65,6 @@ abstract class AdminThemeFramework extends AdminTheme {
 	
 	public function wired() {
 		$this->sanitizer = $this->wire('sanitizer');
-		$user = $this->wire()->user;
-		$this->isLoggedIn = $user && $user->isLoggedin();
 		parent::wired();
 	}
 
@@ -104,12 +95,13 @@ abstract class AdminThemeFramework extends AdminTheme {
 	public function init() {
 		
 		$user = $this->wire('user');
-		if(!$this->isLoggedIn && $this->useAsLogin) $this->setCurrent();
+		if(!$user->isLoggedin() && $this->useAsLogin) $this->setCurrent();
 		parent::init();
 		
 		// if this is not the current admin theme, exit now so no hooks are attached
 		if(!$this->isCurrent()) return;
 
+		$this->isLoggedIn = $user->isLoggedin();
 		$this->isSuperuser = $this->isLoggedIn && $user->isSuperuser();
 		$this->isEditor = $this->isLoggedIn && ($this->isSuperuser || $user->hasPermission('page-edit'));
 		$this->includeInitFile();
@@ -127,7 +119,7 @@ abstract class AdminThemeFramework extends AdminTheme {
 	 */
 	public function includeInitFile() {
 		$config = $this->wire('config');
-		$initFile = $this->path() . 'init.php';
+		$initFile = $config->paths->adminTemplates . 'init.php';
 		if(file_exists($initFile)) {
 			if(strpos($initFile, $config->paths->site) === 0) {
 				// admin themes in /site/modules/ may be compiled
@@ -164,7 +156,7 @@ abstract class AdminThemeFramework extends AdminTheme {
 	public function getHeadline() {
 		$headline = $this->wire('processHeadline');
 		if(!$headline) $headline = $this->wire('page')->get('title|name');
-		if($headline !== 'en' && $this->wire('languages')) $headline = $this->_($headline);
+		if($this->wire('languages')) $headline = $this->_($headline);
 		return $this->sanitizer->entities1($headline);
 	}
 
@@ -294,10 +286,32 @@ abstract class AdminThemeFramework extends AdminTheme {
 	 *
 	 */
 	public function getHeadJS() {
-		$config = $this->wire()->config;
-		return
-			"var ProcessWire = { config: " . wireEncodeJSON($config->js(), true, $config->debug) . " }; " .
+
+		/** @var Config $config */
+		$config = $this->wire('config');
+		
+		/** @var Paths $urls */
+		$urls = $config->urls;
+
+		/** @var array $jsConfig */
+		$jsConfig = $config->js();
+		$jsConfig['debug'] = $config->debug;
+
+		$jsConfig['urls'] = array(
+			'root' => $urls->root,
+			'admin' => $urls->admin,
+			'modules' => $urls->modules,
+			'core' => $urls->core,
+			'files' => $urls->files,
+			'templates' => $urls->templates,
+			'adminTemplates' => $urls->adminTemplates,
+		);
+
+		$out =
+			"var ProcessWire = { config: " . wireEncodeJSON($jsConfig, true, $config->debug) . " }; " .
 			"var config = ProcessWire.config;\n"; // legacy support
+
+		return $out;
 	}
 
 
@@ -375,7 +389,7 @@ abstract class AdminThemeFramework extends AdminTheme {
 	 * @return array
 	 *
 	 */
-	public function ___getPrimaryNavArray() {
+	public function getPrimaryNavArray() {
 
 		$items = array();
 		$config = $this->wire('config');
@@ -774,54 +788,29 @@ abstract class AdminThemeFramework extends AdminTheme {
 	 * 
 	 */
 	public function getModuleConfigInputfields(InputfieldWrapper $inputfields) {
-		$modules = $this->wire()->modules;
-		$input = $this->wire()->input; 
-		$roles = $this->wire()->roles;
 
 		/** @var InputfieldCheckbox $f */
-		$f = $modules->get('InputfieldCheckbox'); 
+		$f = $this->modules->get('InputfieldCheckbox'); 
 		$f->name = 'useAsLogin';
 		$f->label = $this->_('Use this admin theme for login screen?');
 		$f->description = $this->_('When checked, this admin theme will be used on the user login screen.');
 		$f->icon = 'sign-in';
-		$f->columnWidth = 50;
+		$f->collapsed = Inputfield::collapsedBlank;
 		if($this->get('useAsLogin')) $f->attr('checked', 'checked');
 		$inputfields->add($f);
 		
-		if($f->attr('checked') && $input->requestMethod('GET')) {
-			$themes = $modules->findByPrefix('AdminTheme');
+		if($f->attr('checked') && $this->input->requestMethod('GET')) {
 			$class = $this->className();
-			foreach($themes as $name) {
-				if($name === $class) continue;
-				$cfg = $modules->getConfig($name);
+			foreach($this->modules->findByPrefix('AdminTheme') as $name) {
+				if($name == $class) continue;
+				$cfg = $this->modules->getConfig($name);
 				if(!empty($cfg['useAsLogin'])) {
 					unset($cfg['useAsLogin']);
-					$modules->saveConfig($name, $cfg);
+					$this->modules->saveConfig($name, $cfg);
 					$this->message("Removed 'useAsLogin' setting from $name", Notice::debug);
 				}
 			}
 		}
-		
-		/** @var InputfieldSelect $f */
-		$f = $modules->get('InputfieldSelect');
-		$f->name = '_setAdminThemeRoleId'; 
-		$f->label = $this->_('Change users to this admin theme');
-		$f->description = $this->_('Select user role to update matching users to this admin theme.'); 
-		$f->columnWidth = 50;
-		$f->icon = 'users';
-		foreach($roles as $role) {
-			if($role->name === 'guest') continue;
-			$f->addOption($role->id, sprintf($this->_('Role: %s'), $role->name));
-		}
-		$inputfields->add($f);
-		
-		$roleId = (int) $input->post('_setAdminThemeRoleId');
-		$role = $roleId ? $roles->get($roleId) : null;
-		if($role) {
-			$n = $this->wire()->users->setAdminThemeByRole($this, $role); 
-			$this->message(sprintf($this->_('Set %d user(s) to have this admin theme'), $n), Notice::noGroup);
-		}
 	}
-
 }
 

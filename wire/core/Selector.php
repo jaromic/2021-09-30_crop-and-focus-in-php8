@@ -187,13 +187,14 @@ abstract class Selector extends WireData {
 	 *
 	 */
 	public function __construct($field, $value) {
-		$this->set('not', false);
+
+		$this->setField($field);
+		$this->setValue($value);
+		$this->set('not', false); 
 		$this->set('group', null); // group name identified with 'group_name@' before a field name
 		$this->set('quote', ''); // if $value in quotes, this contains either: ', ", [, {, or (, indicating quote type (set by Selectors class)
 		$this->set('forceMatch', null); // boolean true to force match, false to force non-match
 		parent::set('altOperators', array()); // optional alternate operators
-		$this->setField($field);
-		$this->setValue($value);
 	}
 
 	/**

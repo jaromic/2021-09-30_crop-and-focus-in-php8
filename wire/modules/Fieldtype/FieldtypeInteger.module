@@ -35,9 +35,7 @@ class FieldtypeInteger extends Fieldtype {
 	 */
 	public function ___getCompatibleFieldtypes(Field $field) {
 		$fieldtypes = parent::___getCompatibleFieldtypes($field); 
-		$hasDecimal = $this->wire()->modules->isInstalled('FieldtypeDecimal');
 		foreach($fieldtypes as $type) {
-			if($hasDecimal && wireInstanceOf($type, 'FieldtypeDecimal')) continue;
 			if(!$type instanceof FieldtypeInteger && !$type instanceof FieldtypeFloat && $type != 'FieldtypeText') {
 				$fieldtypes->remove($type); 
 			}
@@ -223,7 +221,7 @@ class FieldtypeInteger extends Fieldtype {
 		$f = $this->wire()->modules->get('InputfieldInteger');
 		$f->attr('name', 'defaultValue');
 		$f->label = $this->_('Default value'); 
-		$f->description = $this->_('This value is assigned as the default for this field on pages with no value entered.');
+		$f->description = $this->_('This value is assigned as the default for this field on newly created pages. It does not affect existing pages.');
 		$f->collapsed = Inputfield::collapsedBlank;
 		$f->attr('value', strlen($field->get('defaultValue')) ? (int) $field->get('defaultValue') : ''); 
 		$inputfields->add($f);

@@ -138,15 +138,7 @@ class TemplateFile extends WireData {
 	 * DEPRECATED: Variables that will be applied globally to this and all other TemplateFile instances
 	 *
 	 */
-	static protected $globals = array();
-
-	/**
-	 * Output buffer starting level, set by first TemplateFile instance that gets created
-	 * 
-	 * @var null|int
-	 * 
-	 */
-	static protected $obStartLevel = null;
+	static protected $globals = array(); 
 
 	/**
 	 * Construct the template file
@@ -155,7 +147,6 @@ class TemplateFile extends WireData {
 	 *
 	 */
 	public function __construct($filename = '') {
-		if(self::$obStartLevel === null) self::$obStartLevel = ob_get_level();
 		if($filename) $this->setFilename($filename); 
 	}
 
@@ -568,24 +559,6 @@ class TemplateFile extends WireData {
 	 */
 	public static function getRenderStack() {
 		return self::$renderStack;
-	}
-
-	/**
-	 * Clear out all pending output buffers
-	 * 
-	 * @since 3.0.175
-	 * @return int Number of output buffers cleaned
-	 * 
-	 */
-	public static function clearAll() {
-		$n = 0;
-		if(self::$obStartLevel !== null) {
-			while(ob_get_level() > self::$obStartLevel) {
-				ob_end_clean();
-				$n++;
-			}
-		}
-		return $n;
 	}
 
 	/**

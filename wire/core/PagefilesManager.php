@@ -63,14 +63,6 @@ class PagefilesManager extends Wire {
 	 */
 
 	/**
-	 * Count of renamed paths when changing between pagefileSecure and non-pagefileSecure
-	 * 
-	 * @var int
-	 * 
-	 */
-	static $numRenamedPaths = 0;
-
-	/**
 	 * Reference to the Page object this PagefilesManager is managing
 	 * 
 	 * @var Page
@@ -504,27 +496,6 @@ class PagefilesManager extends Wire {
 	}
 
 	/**
-	 * Does given Page have the given file? Checks in a silent manner, not creating anything.
-	 * 
-	 * @param Page $page
-	 * @param string $file Filename (basename) excluding path
-	 * @param bool $getPathname Return the full pathname to the file (rather than true) if it exists? (default=false)
-	 * @return bool|string
-	 * @since 3.0.166
-	 * 
-	 */
-	static public function hasFile(Page $page, $file, $getPathname = false) {
-		$path = self::_path($page); 
-		if(!is_dir($path)) return false;
-		$file = basename($file);
-		$file = str_replace(array('\\', '/', '..'), '', $file);
-		$pathname = $path . $file;
-		if(!file_exists($pathname)) return false;
-		if($getPathname) return $pathname;
-		return true;
-	}
-
-	/**
 	 * Get the files path for a given page (whether it exists or not).
 	 * 
 	 * #pw-group-static
@@ -536,7 +507,7 @@ class PagefilesManager extends Wire {
 	 */
 	static public function _path(Page $page, $extended = false) {
 
-		$config = $page->wire()->config;
+		$config = $page->wire('config');
 		$path = $config->paths->files; 
 		
 		$securePrefix = $config->pagefileSecurePathPrefix; 
@@ -549,39 +520,39 @@ class PagefilesManager extends Wire {
 			$publicPath = $path . $page->id . '/';
 			$securePath = $path . $securePrefix . $page->id . '/';
 		}
-		
-		$secureFiles = $page->secureFiles();
-		
-		if($secureFiles === false) {
-			// use the public path, renaming a secure path to public if it exists
-			if(is_dir($securePath) && !is_dir($publicPath) && $secureFiles !== null) {
-				$page->wire()->files->rename($securePath, $publicPath);
-				self::$numRenamedPaths++;
+		/* @todo 3.0.150:
+		$filesPublic = true;
+		if(!$page->isPublic()) {
+			// page not publicly viewable to all, check if files are public or not
+			if($config->pagefileSecure) {
+				$filesPublic = false;
+			} else if($page->template && $page->template->pagefileSecure) {
+				$filesPublic = false; // 3.0.150+
 			}
-			$filesPath = $publicPath;
-			
-		} else if($secureFiles === null) {
+		}
+
+		if($filesPublic) {
+		*/
+		if($page->isPublic() || !$config->pagefileSecure) {
+			// use the public path, renaming a secure path to public if it exists
+			if(is_dir($securePath) && !is_dir($publicPath)) {
+				@rename($securePath, $publicPath);
+			}
 			$filesPath = $publicPath;
 			
 		} else {
 			// use the secure path, renaming the public to secure if it exists
 			$hasSecurePath = is_dir($securePath);
 			if(is_dir($publicPath) && !$hasSecurePath) {
-				$page->wire()->files->rename($publicPath, $securePath);
-				self::$numRenamedPaths++;
+				@rename($publicPath, $securePath);
 
 			} else if(!$hasSecurePath && self::defaultSecurePathPrefix != $securePrefix) {
 				// we track this just in case the prefix was newly added to config.php, this prevents 
 				// losing track of the original directories
-				if($extended) {
-					$securePath2 = $path . self::_dirExtended($page->id, self::defaultSecurePathPrefix);
-				} else {
-					$securePath2 = $path . self::defaultSecurePathPrefix . $page->id . '/';
-				}
+				$securePath2 = $extended ? $path . self::_dirExtended($page->id, self::defaultSecurePathPrefix) : $path . self::defaultSecurePathPrefix . $page->id . '/';
 				if(is_dir($securePath2)) {
 					// if the secure path prefix has been changed from undefined to defined
-					$page->wire()->files->rename($securePath2, $securePath);
-					self::$numRenamedPaths++;
+					@rename($securePath2, $securePath);
 				}
 			}
 			$filesPath = $securePath;
@@ -593,22 +564,6 @@ class PagefilesManager extends Wire {
 		}
 		
 		return $filesPath; 
-	}
-
-	/**
-	 * Get quantity of renamed paths to to pagefileSecure changes
-	 * 
-	 * #pw-internal
-	 * 
-	 * @param bool $reset Also reset to 0?
-	 * @return int
-	 * @since 3.0.166
-	 * 
-	 */
-	static public function numRenamedPaths($reset = false) {
-		$num = self::$numRenamedPaths;
-		if($reset) self::$numRenamedPaths = 0;
-		return $num;
 	}
 
 	/**

@@ -12,7 +12,6 @@ var InputfieldPageListSelectMultiple = {
 		$t.ProcessPageList({
 			mode: 'select',
 			rootPageID: $t.attr('data-root'),
-			showRootPage: true, 
 			selectShowPageHeader: false,
 			selectSelectHref: $t.attr('data-href'),
 			selectStartLabel: $t.attr('data-start'),

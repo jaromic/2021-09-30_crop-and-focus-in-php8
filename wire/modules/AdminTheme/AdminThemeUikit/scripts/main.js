@@ -437,17 +437,17 @@ var ProcessWireAdminTheme = {
 				var $li = $("<li></li>").addClass('pw-nav-dup').append($a2);
 				$ul.append($li);
 				if(data.add) {
-					var $li2 = $(
+					var $li = $(
 						"<li class='pw-nav-add'>" +
 						"<a href='" + data.url + data.add.url + "'>" +
 						"<i class='fa fa-fw fa-" + data.add.icon + " pw-nav-icon'></i>" +
 						data.add.label + "</a>" +
 						"</li>"
 					);
-					$ul.append($li2);
+					$ul.append($li);
 				}
 				// populate the retrieved items
-				$.each(data.list, function(i) {
+				$.each(data.list, function(n) {
 					if(this.label.indexOf('<span') > -1) {
 						// Uikit beta 34 does not like span elements in the label for some reason
 						this.label = this.label.replace(/<\/?span[^>]*>/g, '');
@@ -840,7 +840,6 @@ var ProcessWireAdminTheme = {
 		}); 
 
 		$('body').addClass('InputfieldColumnWidthsInit');
-		Inputfields.toggleBehavior = ProcessWire.config.adminTheme.toggleBehavior;
 		initFormMarkup();
 	},
 

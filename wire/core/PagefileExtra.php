@@ -205,7 +205,8 @@ class PagefileExtra extends WireData {
 	 * 
 	 */
 	public function rename() {
-		if(!$this->filenamePrevious || !is_readable($this->filenamePrevious)) return false;
+		if(!$this->exists()) return false;
+		if(!$this->filenamePrevious) return false;
 		return $this->wire('files')->rename($this->filenamePrevious, $this->filename());
 	}
 

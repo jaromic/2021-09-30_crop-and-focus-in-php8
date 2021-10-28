@@ -359,12 +359,9 @@ function InputfieldImage($) {
 			.magnificPopup(options);
 
 		// move all of the .ImageData elements to the edit panel
-		var $editEdit = $edit.find(".InputfieldImageEdit__edit");
-		$editEdit.attr("data-current", $el.attr("id"))
+		$edit.find(".InputfieldImageEdit__edit")
+			.attr("data-current", $el.attr("id"))
 			.append($el.find(".ImageData").children().not(".InputfieldFileSort"));
-		
-		// trigger image edit event (rpsallis)
-		$editEdit.find('.Inputfield').trigger('image-edit');
 	}
 
 	/**
@@ -1022,9 +1019,8 @@ function InputfieldImage($) {
 			var $span = $(this).children('span');
 			var $input = $span.closest('.gridImage, .InputfieldImageEdit').find('.InputfieldFileRename');
 			var $list = $span.closest('.gridImages');
-			var sortable = $list.hasClass('ui-sortable');
 
-			if(sortable) $list.sortable('disable');
+			$list.sortable('disable');
 			$input.val($span.text());
 
 			$span.on('keypress', function(e) {
@@ -1050,7 +1046,7 @@ function InputfieldImage($) {
 					//console.log('changed to: ' + val);
 				}
 				$span.off('keypress');
-				if(sortable) $list.sortable('enable');
+				$list.sortable('enable');
 			});
 		});
 	}

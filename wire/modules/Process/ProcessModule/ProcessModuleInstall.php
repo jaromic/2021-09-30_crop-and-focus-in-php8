@@ -11,12 +11,8 @@
  */
 
 class ProcessModuleInstall extends Wire {
-
-	/**
-	 * @var WireTempDir
-	 * 
-	 */
-	private $tempDir = null;
+	
+	protected $tempDir = '';
 
 	/**
 	 * Returns a temporary directory (path) for use by this object
@@ -118,8 +114,7 @@ class ProcessModuleInstall extends Wire {
 		static $level = 0;
 		$level++;
 		$files = array();
-		
-		if(!$path) $path = $this->wire()->config->paths->siteModules;
+		if(!$path) $path = $this->wire('config')->paths->siteModules;
 		
 		// find the names of all existing module files, so we can defer to their dirs
 		// if a module is being installed that already exists
@@ -163,8 +158,7 @@ class ProcessModuleInstall extends Wire {
 		$moduleFiles1 = array(); // level1 module files (those in closest dir or subdir)
 		$moduleDirs = array(); // all module dirs found
 		$moduleDir = ''; // recommended name for module dir (returned by this method)
-		
-		if(!$modulePath) $modulePath = $this->wire()->config->paths->siteModules;
+		if(!$modulePath) $modulePath = $this->wire('config')->paths->siteModules;
 		$tempDir = $this->getTempDir();
 
 		foreach($files as $key => $f) {
@@ -278,36 +272,26 @@ class ProcessModuleInstall extends Wire {
 	/**
 	 * Unzip the module file to tempDir and then copy to destination directory
 	 *
-	 * @param string $zipFile File to unzip
+	 * @param string $file File to unzip
 	 * @param string $destinationDir Directory to copy completed files into. Optionally omit to determine automatically.
 	 * @return bool|string Returns destinationDir on success, false on failure
 	 * @throws WireException
 	 *
 	 */
-	public function unzipModule($zipFile, $destinationDir = '') {
-		
-		$config = $this->wire()->config;
+	public function unzipModule($file, $destinationDir = '') {
 
 		$success = false;
 		$tempDir = $this->getTempDir();
 		$mkdirDestination = false;
-		$fileTools = $this->wire()->files;
 
 		try {
-			$files = $fileTools->unzip($zipFile, $tempDir);
-			if(is_file($zipFile)) $fileTools->unlink($zipFile, true);
-			$qty = count($files);
-			if($qty < 100 && $config->debug) {
-				foreach($files as $f) {
-					$this->message(sprintf($this->_('Extracted: %s'), $f));
-				}
-			} else {
-				$this->message(sprintf($this->_n('Extracted %d file', 'Extracted %d files', $qty), $qty));
-			}
+			$files = $this->wire('files')->unzip($file, $tempDir);
+			if(is_file($file)) $this->wire('files')->unlink($file, true);
+			foreach($files as $f) $this->message("Extracted: $f", Notice::debug); 
 
 		} catch(\Exception $e) {
 			$this->error($e->getMessage());
-			if(is_file($zipFile)) $fileTools->unlink($zipFile, true);
+			if(is_file($file)) $this->wire('files')->unlink($file, true);
 			return false;
 		}
 
@@ -325,20 +309,20 @@ class ProcessModuleInstall extends Wire {
 			// destination dir already there, perhaps an older version of same module?
 			// create a backup of it
 			$hasBackup = $this->backupDir($destinationDir);
-			if($hasBackup) $fileTools->mkdir($destinationDir, true); 
+			if($hasBackup) $this->wire('files')->mkdir($destinationDir, true); 
 		} else {
-			if($fileTools->mkdir($destinationDir, true)) $mkdirDestination = true;
+			if($this->wire('files')->mkdir($destinationDir, true)) $mkdirDestination = true;
 			$hasBackup = false; 
 		}
 
 		// label to identify destinationDir in messages and errors
-		$dirLabel = str_replace($config->paths->root, '/', $destinationDir);
+		$dirLabel = str_replace($this->config->paths->root, '/', $destinationDir);
 
 		if(is_dir($destinationDir)) {
 			$from = $tempDir . $extractedDir;
-			if($fileTools->copy($from, $destinationDir)) {
+			if($this->wire('files')->copy($from, $destinationDir)) {
 				$this->message($this->_('Successfully copied files to new directory:') . ' ' . $dirLabel);
-				$fileTools->chmod($destinationDir, true);
+				$this->wire('files')->chmod($destinationDir, true);
 				$success = true;
 			} else {
 				$this->error($this->_('Unable to copy files to new directory:') . ' ' . $dirLabel);
@@ -350,72 +334,53 @@ class ProcessModuleInstall extends Wire {
 
 		if(!$success) {
 			$this->error($this->_('Unable to copy module files:') . ' ' . $dirLabel);
-			if($mkdirDestination && !$fileTools->rmdir($destinationDir, true)) {
+			if($mkdirDestination && !$this->wire('files')->rmdir($destinationDir, true)) {
 				$this->error($this->_('Could not delete failed module dir:') . ' ' . $destinationDir, Notice::log);
 			}
 		}
 
 		return $success ? $destinationDir : false;
 	}
-
-	/**
-	 * Create a backup of a module directory
-	 * 
-	 * @param string $moduleDir
-	 * @return bool
-	 * @throws WireException
-	 * 
-	 */
+	
 	protected function backupDir($moduleDir) {
-		$files = $this->wire()->files;
-		$config = $this->wire()->config;
-		
 		$dir = rtrim($moduleDir, "/");
 		$name = basename($dir);
 		$parentDir = dirname($dir);
 		$backupDir = "$parentDir/.$name/";
-		if(is_dir($backupDir)) $files->rmdir($backupDir, true); // if there's already an old backup copy, remove it
+		if(is_dir($backupDir)) wireRmdir($backupDir, true); // if there's already an old backup copy, remove it
 		$success = false;
 		
 		if(is_link(rtrim($moduleDir, '/'))) {
 			// module directory is a symbolic link
 			// copy files from symlink dir to real backup dir
-			$success = $files->copy($moduleDir, $backupDir); 
+			$success = $this->wire('files')->copy($moduleDir, $backupDir); 
 			// remove symbolic link
 			unlink(rtrim($moduleDir, '/'));
-			$dir = str_replace($config->paths->root, '/', $moduleDir); 
+			$dir = str_replace($this->wire('config')->paths->root, '/', $moduleDir); 
 			$this->warning(sprintf(
 				$this->_('Please note that %s was a symbolic link and has been converted to a regular directory'), $dir
 			)); 
 		} else {
 			// module is a regular directory
 			// just rename it to become the new backup dir
-			if($files->rename($moduleDir, $backupDir)) $success = true; 
+			if($this->wire('files')->rename($moduleDir, $backupDir)) $success = true; 
 		}
 		
 		if($success) {
-			$this->message(sprintf($this->_('Backed up existing %s'), $name) . " => " . str_replace($config->paths->root, '/', $backupDir));
+			$this->message(sprintf($this->_('Backed up existing %s'), $name) . " => " . str_replace($this->wire('config')->paths->root, '/', $backupDir));
 			return true; 
 		} else {
 			return false;
 		}
 	}
-
-	/**
-	 * Restore a module directory
-	 * 
-	 * @param string $moduleDir
-	 * @return bool
-	 * @throws WireException
-	 * 
-	 */
+	
 	protected function restoreDir($moduleDir) {
 		$dir = rtrim($moduleDir, "/");
 		$name = basename($dir);
 		$parentDir = dirname($dir);
 		$backupDir = "$parentDir/.$name/";
 		if(is_dir($backupDir)) {
-			$this->wire()->files->rmdir($moduleDir, true); // if there's already an old backup copy, remove it
+			wireRmdir($moduleDir, true); // if there's already an old backup copy, remove it
 			if(rename($backupDir, $moduleDir)) { 
 				$this->message(sprintf($this->_('Restored backup of %s'), $name) . " => $moduleDir");
 			}
@@ -494,7 +459,7 @@ class ProcessModuleInstall extends Wire {
 
 		// download the zip file and save it in assets directory
 		$success = false;
-		$http = $this->wire(new WireHttp()); /** @var WireHttp $http */
+		$http = $this->wire(new WireHttp());
 
 		try {
 			$file = $http->download($url, $tempZIP); // throws exceptions on any error
@@ -507,7 +472,7 @@ class ProcessModuleInstall extends Wire {
 
 		} catch(\Exception $e) {
 			$this->error($e->getMessage());
-			$this->wire()->files->unlink($tempZIP);
+			$this->wire('files')->unlink($tempZIP);
 		}
 
 		return $success ? $destinationDir : false; 

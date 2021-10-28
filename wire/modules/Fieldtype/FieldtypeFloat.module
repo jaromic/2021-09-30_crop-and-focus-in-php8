@@ -18,7 +18,7 @@ class FieldtypeFloat extends Fieldtype {
 	public static function getModuleInfo() {
 		return array(
 			'title' => __('Float', __FILE__),
-			'summary' => __('Field that stores a floating point number', __FILE__),
+			'summary' => __('Field that stores a floating point (decimal) number', __FILE__),
 			'version' => 106,
 			'permanent' => true, 
 		);
@@ -32,10 +32,8 @@ class FieldtypeFloat extends Fieldtype {
 	 * 
 	 */
 	public function ___getCompatibleFieldtypes(Field $field) {
-		$fieldtypes = parent::___getCompatibleFieldtypes($field);
-		$hasDecimal = $this->wire()->modules->isInstalled('FieldtypeDecimal');
+		$fieldtypes = parent::___getCompatibleFieldtypes($field); 
 		foreach($fieldtypes as $type) {
-			if($hasDecimal && wireInstanceOf($type, 'FieldtypeDecimal')) continue;
 			if(!$type instanceof FieldtypeInteger && !$type instanceof FieldtypeFloat && $type != 'FieldtypeText') {
 				$fieldtypes->remove($type); 
 			}

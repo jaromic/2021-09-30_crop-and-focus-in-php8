@@ -112,12 +112,11 @@ function PageFrontEditInit($) {
 			return false;
 		});
 
-		if(t.is('span')) { // single-line text
+		if(t.hasClass('pw-edit-InputfieldText')) {
 			// via @canrau
 			copy.keydown(function(e) {
 				if(e.keyCode == 13){
 					e.preventDefault();
-					$(this).blur();
 				}
 			});
 		}

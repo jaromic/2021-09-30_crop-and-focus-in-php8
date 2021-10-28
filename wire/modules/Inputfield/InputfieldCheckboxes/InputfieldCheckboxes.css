@@ -49,13 +49,6 @@
 	padding-bottom: 1%; 
 }
 
-.Inputfields .InputfieldCheckboxesWidth li {
-	display: inline-block;
-}
-.Inputfields .InputfieldCheckboxesWidth li label {
-	white-space: initial;
-}
-
 .InputfieldCheckboxes table label {
 	white-space: nowrap;
 }

@@ -15,47 +15,31 @@ class WireTempDir extends Wire {
 	 * 
 	 */
 	const hiddenFileName = '.wtd';
-
-	/**
-	 * True when remove method has been called at least once
-	 * 
-	 * This is to ensure later instances don’t perform redundant cleanup tasks. 
-	 * 
-	 * @var bool
-	 * 
-	 */
-	static protected $maintenanceCompleted = false;	
 	
 	protected $classRoot = null; 	// example: /site/assets/WireTempDir/ 
 	protected $tempDirRoot = null; 	// example: /site/assets/WireTempDir/.SomeName/
 	protected $tempDir = null;		// example: /site/assets/WireTempDir/.SomeName/1/
-	protected $tempDirMaxAge = 120; // maximum age in seconds for files in a user-specified name
-	protected $cleanMaxAge = 86400; // age after which files an be assumed to be abandoned and need cleanup
-	protected $autoRemove = true; 	// automatically remove temp dir when this class is destructed?
+	protected $tempDirMaxAge = 120; // maximum age in seconds
+	protected $autoRemove = true; 	// automatially remove temp dir when this class is destructed?
 	protected $createdName = '';    // name of runtime created random tempDirRoot, when applicable
 
-
 	/**
-	 * Construct 
+	 * Construct new temp dir
 	 * 
-	 * @param string|object $name DEPRECATED (Call 'init' method instead)
-	 * @param string $basePath DEPRECATED (Call 'init' method instead)
+	 * While this constructor accepts arguments, if you are in a multi-instance environment you should instead construct
+	 * with no arguments, inject the ProcessWire instance, and then call the create() method with those arguments. 
+	 * 
+	 * @param string|object $name Recommend providing the object that is using the temp dir, but can also be any string 
+	 * @param string $basePath Base path where temp dirs should be created. Omit to use default (recommended). 
+	 * @throws WireException if given a $root that doesn't exist
 	 * 
 	 */
 	public function __construct($name = '', $basePath = '') {
-		if($name) $this->init($name, $basePath); 
+		if($name) $this->create($name, $basePath); 
 	}
 
 	/**
-	 * Destruct
-	 * 
-	 */
-	public function __destruct() {
-		if($this->autoRemove) $this->remove();
-	}
-
-	/**
-	 * Initialize temporary directory
+	 * Create the temporary directory
 	 * 
 	 * This method should only be called once per instance of this class. If you specified a $name argument
 	 * in the constructor, then you should not call this method because it will have already been called. 
@@ -66,43 +50,31 @@ class WireTempDir extends Wire {
 	 * @return string Returns the root of the temporary directory. Use the get() method to get a dir for use. 
 	 *
 	 */
-	public function init($name = '', $basePath = '') {
+	public function create($name = '', $basePath = '') {
 
 		if(!is_null($this->tempDirRoot)) throw new WireException("Temp dir has already been created");
 		if(empty($name)) $name = $this->createName();
 		if(is_object($name)) $name = wireClassName($name, false);
 
-		$basePath = $this->classRootPath(true, $basePath);
-		$this->classRoot = $basePath;
-		$this->tempDirRoot = $basePath . ".$name/";
-		
-		return $this->tempDirRoot;
-	}
-
-	/**
-	 * Return the class root path for cache files (i.e. /path/to/site/assets/cache/WireTempDir/)
-	 * 
-	 * @param bool $createIfNotExists Create the directory if it does not exist? (default=false)
-	 * @param string $basePath Path to start from (default=/path/to/site/assets/cache/)
-	 * @return string
-	 * @throws WireException
-	 * @since 3.0.175
-	 * 
-	 */
-	protected function classRootPath($createIfNotExists = false, $basePath = '') {
 		if($basePath) {
 			// they provide base path
 			$basePath = rtrim($basePath, '/') . '/'; // ensure it ends with trailing slash
 			if(!is_dir($basePath)) throw new WireException("Provided base path doesn't exist: $basePath");
 			if(!is_writable($basePath)) throw new WireException("Provided base path is not writiable: $basePath");
+
 		} else {
 			// we provide base path (root)
-			$basePath = $this->wire()->config->paths->cache; 
-			if($createIfNotExists && !is_dir($basePath)) $this->mkdir($basePath);
+			$basePath = $this->wire('config')->paths->cache;
+			if(!is_dir($basePath)) $this->mkdir($basePath);
 		}
-		$basePath .= wireClassName($this, false) . '/'; // i.e. /path/to/site/assets/cache/WireTempDir/
-		if($createIfNotExists && !is_dir($basePath)) $this->mkdir($basePath);
-		return $basePath;
+
+		$basePath .= wireClassName($this, false) . '/';
+		$this->classRoot = $basePath;
+		if(!is_dir($basePath)) $this->mkdir($basePath);
+
+		$this->tempDirRoot = $basePath . ".$name/";
+		
+		return $this->tempDirRoot;
 	}
 
 	/**
@@ -121,26 +93,19 @@ class WireTempDir extends Wire {
 	}
 	
 	/**
-	 * Set the max age of temp files and/or maintenance cleanup max age 
+	 * Set the max age of temp files (default=120 seconds)
 	 * 
-	 * #pw-internal
-	 * 
-	 * @param int|null $tempDirMaxAge Temp dir max age in seconds (default=120)
-	 * @param int|null $cleanMaxAge Maintenance cleanup max age in seconds (default=86400) 3.0.175+
+	 * @param $seconds
 	 * @return $this
 	 * 
 	 */
-	public function setMaxAge($tempDirMaxAge = null, $cleanMaxAge = null) {
-		if(is_int($tempDirMaxAge)) $this->tempDirMaxAge = $tempDirMaxAge;
-		if(is_int($cleanMaxAge)) $this->cleanMaxAge = $cleanMaxAge; 
+	public function setMaxAge($seconds) {
+		$this->tempDirMaxAge = (int) $seconds; 
 		return $this; 
 	}
 
 	/**
 	 * Call this with 'false' to prevent temp dir from being removed automatically when object is destructed
-	 * 
-	 * If you do this, then you accept responsibility for removing the directory by calling $tempDir->remove(); 
-	 * If you do not remove it yourself, WireTempDir will remove as part of the daily maintenance. 
 	 * 
 	 * @param bool $remove
 	 * @return $this
@@ -149,6 +114,10 @@ class WireTempDir extends Wire {
 	public function setRemove($remove = true) {
 		$this->autoRemove = (bool) $remove; 	
 		return $this;
+	}
+	
+	public function __destruct() {
+		if($this->autoRemove) $this->remove();
 	}
 	
 	/**
@@ -163,7 +132,7 @@ class WireTempDir extends Wire {
 		
 		static $level = 0;
 		
-		if(is_null($this->tempDirRoot)) $this->init();
+		if(is_null($this->tempDirRoot)) throw new WireException("Please call the create() method before the get() method"); 
 
 		// first check if cached result from previous call
 		if(!is_null($this->tempDir) && file_exists($this->tempDir)) return $this->tempDir;
@@ -223,6 +192,8 @@ class WireTempDir extends Wire {
 	 */
 	public function remove() {
 		
+		static $classRuns = 0;
+
 		$errorMessage = 'Unable to remove temp dir';
 		$success = true; 
 	
@@ -245,15 +216,15 @@ class WireTempDir extends Wire {
 				$this->rmdir($this->tempDirRoot, true);
 			} else {
 				// if it is potentially used by multiple instances, then remove only expired files
-				$this->removeExpiredDirs($this->tempDirRoot, $this->tempDirMaxAge);
+				$this->removeExpiredDirs($this->tempDirRoot);
 			}
 		}
 		
-		if(!self::$maintenanceCompleted && $this->classRoot && is_dir($this->classRoot)) {
-			$this->removeExpiredDirs($this->classRoot, $this->cleanMaxAge); 
+		if(!$classRuns && $this->classRoot && is_dir($this->classRoot)) {
+			$this->removeExpiredDirs($this->classRoot, 86400); 
 		}
 	
-		self::$maintenanceCompleted = true;
+		$classRuns++;
 		
 		return $success; 
 	}
@@ -264,11 +235,11 @@ class WireTempDir extends Wire {
 	 * Also removes $path if it's found that everything in it is expired.
 	 * 
 	 * @param string $path
-	 * @param int Max age in seconds
+	 * @param int|null Optionally specify a max age to override default setting.
 	 * @return bool
 	 * 
 	 */
-	protected function removeExpiredDirs($path, $maxAge) {
+	protected function removeExpiredDirs($path, $maxAge = null) {
 		
 		if(!is_dir($path)) return false;
 		if(!is_int($maxAge)) $maxAge = $this->tempDirMaxAge;
@@ -288,7 +259,7 @@ class WireTempDir extends Wire {
 			}
 			
 			// old dir found: check times on files/dirs within that dir
-			$pathname = $this->wire()->files->unixDirName($dir->getPathname());
+			$pathname = $this->wire('files')->unixDirName($dir->getPathname());
 			if(!$this->isTempDir($pathname)) continue;
 			
 			$removeDir = true;
@@ -349,11 +320,9 @@ class WireTempDir extends Wire {
 	 * 
 	 */
 	public function removeAll() {
-		$classRoot = $this->classRoot;
-		if(empty($classRoot)) $classRoot = $this->classRootPath(false);
-		if($classRoot && is_dir($classRoot)) {
+		if($this->classRoot && is_dir($this->classRoot)) {
 			// note: use of $files->rmdir rather than $this->rmdir is intentional
-			return $this->wire()->files->rmdir($classRoot, true);
+			return $this->wire('files')->rmdir($this->classRoot, true);
 		}
 		return false;
 	}	
@@ -397,12 +366,11 @@ class WireTempDir extends Wire {
 	 * 
 	 */
 	protected function rmdir($dir, $recursive = false) {
-		$files = $this->wire()->files;
-		$dir = $files->unixDirName($dir);
+		$dir = $this->wire('files')->unixDirName($dir);
 		if(!strlen($dir) || !is_dir($dir)) return true;
 		if(!$this->isTempDir($dir)) return false;
 		if(is_file($dir . self::hiddenFileName)) $this->wire('files')->unlink($dir . self::hiddenFileName, true);
-		return $files->rmdir($dir, $recursive, true);
+		return $this->wire('files')->rmdir($dir, $recursive, true);
 	}
 
 	/**
@@ -413,7 +381,7 @@ class WireTempDir extends Wire {
 	 * 
 	 */
 	protected function isTempDir($dir) {
-		$files = $this->wire()->files;
+		$files = $this->wire('files');
 		if(!strlen($dir) || !is_dir($dir)) {
 			// if given a non-directory return false
 			return false;
@@ -424,36 +392,5 @@ class WireTempDir extends Wire {
 		}
 		return false;
 	}
-	
-	/**
-	 * Perform maintenance by cleaning up old temporary directories
-	 * 
-	 * Note: This is done automatically if any temporary directories are created during the request.
-	 *
-	 * @throws WireException
-	 * @return bool
-	 * @since 3.0.175
-	 *
-	 */
-	public function maintenance() {
-		if(self::$maintenanceCompleted) return true;
-		$classRoot = $this->classRoot ? $this->classRoot : $this->classRootPath(false);
-		$result = $this->removeExpiredDirs($classRoot, $this->cleanMaxAge);
-		self::$maintenanceCompleted = true;
-		return $result;
-	}
-
-	
-	/**
-	 * @deprecated Use init() method instead
-	 * @param string $name
-	 * @param string $basePath
-	 * @return string
-	 *
-	 */
-	public function create($name = '', $basePath = '') {
-		return $this->init($name, $basePath);
-	}
-
 
 }

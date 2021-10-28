@@ -14,22 +14,18 @@ if(!defined("PROCESSWIRE")) die();
 /** @var Paths $urls */
 /** @var string $layout */
 
-$version = $adminTheme->version . 'g';
-$rootUrl = $config->urls->root;
-$themeUrl = $adminTheme->url();
-$styles = $config->styles;
-$scripts = $config->scripts;
+$version = $adminTheme->version . 'e';
 
-$styles->prepend($rootUrl . "wire/templates-admin/styles/AdminTheme.css?v=$version");
-$styles->prepend($adminTheme->getUikitCSS());
-$styles->append($rootUrl . "wire/templates-admin/styles/font-awesome/css/font-awesome.min.css?v=$version");
+$config->styles->prepend($config->urls->root . "wire/templates-admin/styles/AdminTheme.css?v=$version");
+$config->styles->prepend($adminTheme->getUikitCSS());
+$config->styles->append($config->urls->root . "wire/templates-admin/styles/font-awesome/css/font-awesome.min.css?v=$version");
 
 $ext = $config->debug ? "js" : "min.js";
-$scripts->append($rootUrl . "wire/templates-admin/scripts/inputfields.$ext?v=$version");
-$scripts->append($rootUrl . "wire/templates-admin/scripts/main.$ext?v=$version");
-$scripts->append($themeUrl . "uikit/dist/js/uikit.min.js?v=$version");
-$scripts->append($themeUrl . "uikit/dist/js/uikit-icons.min.js?v=$version");
-$scripts->append($themeUrl . "scripts/main.js?v=$version");
+$config->scripts->append($config->urls->root . "wire/templates-admin/scripts/inputfields.$ext?v=$version");
+$config->scripts->append($config->urls->root . "wire/templates-admin/scripts/main.$ext?v=$version");
+$config->scripts->append($config->urls->adminTemplates . "uikit/dist/js/uikit.min.js?v=$version");
+$config->scripts->append($config->urls->adminTemplates . "uikit/dist/js/uikit-icons.min.js?v=$version");
+$config->scripts->append($config->urls->adminTemplates . "scripts/main.js?v=$version");
 
 ?>
 
@@ -46,13 +42,13 @@ $scripts->append($themeUrl . "scripts/main.js?v=$version");
 	</script>
 
 	<?php
-	foreach($styles as $file) {
+	foreach($config->styles as $file) {
 		echo "\n\t<link type='text/css' href='$file' rel='stylesheet' />";
 	}
 	if($adminTheme->maxWidth && strpos($layout, 'sidenav') === false) {
 		echo "\n\t<style type='text/css'>.pw-container { max-width: {$adminTheme->maxWidth}px; }</style>";
 	}
-	foreach($scripts as $file) {
+	foreach($config->scripts as $file) {
 		echo "\n\t<script type='text/javascript' src='$file'></script>";
 	}
 	?>

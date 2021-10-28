@@ -364,7 +364,7 @@ class ProcessPageLister extends Process implements ConfigurableModule {
 				$selector .= ", $s->value";
 			}
 			$template = $this->getSelectorTemplates($selector); 
-			if(count($template) === 1) $this->set('template', reset($template));
+			if(count($template)) $this->set('template', reset($template));
 		}
 
 		if($input->post('reset_total')) {
@@ -1567,9 +1567,6 @@ class ProcessPageLister extends Process implements ConfigurableModule {
 		} else if(strpos($name, '.data') && preg_match('/\.data(\d+)$/', $name, $matches)) {
 			// i.e. title.data1234 or categories.title.data1234
 			$language = $languages->get((int) $matches[1]); 
-		} else {
-			// no language identified in field name
-			$language = $this->wire()->user->language;
 		}
 		
 		//if(!wireInstanceOf($field->type, 'FieldtypeLanguageInterface')) return null;
@@ -2251,7 +2248,7 @@ class ProcessPageLister extends Process implements ConfigurableModule {
 	 * @return ProcessPageListerBookmarks
 	 * 
 	 */
-	public function getBookmarksInstance() {
+	protected function getBookmarksInstance() {
 		static $bookmarks = null;
 		if(is_null($bookmarks)) {
 			require_once(dirname(__FILE__) . '/ProcessPageListerBookmarks.php');

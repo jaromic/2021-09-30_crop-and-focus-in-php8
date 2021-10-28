@@ -7,7 +7,6 @@ var InputfieldPageListSelect = {
 		$inputfield.ProcessPageList({
 			mode: 'select',
 			rootPageID: parseInt($inputfield.attr('data-root')),
-			showRootPage: true, 
 			selectShowPath: parseInt($inputfield.attr('data-showPath')) > 0 ? true : false, 
 			selectAllowUnselect: parseInt($inputfield.attr('data-allowUnselect')) > 0 ? true : false,
 			selectShowPageHeader: true, 

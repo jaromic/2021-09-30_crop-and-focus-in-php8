@@ -1,12 +1,8 @@
-> You might also like [Caret](http://caret.io?ref=parsedown) - our Markdown editor for the Desktop.
-
 ## Parsedown Extra
-
-[![Build Status](https://img.shields.io/travis/erusev/parsedown-extra/master.svg?style=flat-square)](https://travis-ci.org/erusev/parsedown-extra)
 
 An extension of [Parsedown](http://parsedown.org) that adds support for [Markdown Extra](https://michelf.ca/projects/php-markdown/extra/).
 
-[See Demo](http://parsedown.org/extra/)
+[[ demo ]](http://parsedown.org/extra/)
 
 ### Installation
 
